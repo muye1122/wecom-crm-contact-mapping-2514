@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    participant W as 企微回调
+    participant S as 映射服务
+    participant D as 映射表
+    participant C as CRM接口
+
+    W->>S: 客户删除事件 external_userid / 员工userid / org_id / site_id
+    S->>D: 查询映射行
+    D-->>S: 命中（confirmed, crm_contact_id=crm_ct_9021）
+    S->>D: 从 follow_userids 移除该员工
+    S->>D: 判断剩余跟进员工数
+    Note over S,D: 仍有其他在职员工则保留映射行，match_status 与 crm_contact_id 不变
+    S->>D: 无剩余员工 → is_deleted=1（软删除，保留 24 个月）
+    S->>C: 写跟进记录 wecom_contact_unfollowed
+    C-->>S: 成功
+    S->>D: 更新审计字段与 last_synced_at
+    S-->>W: ack

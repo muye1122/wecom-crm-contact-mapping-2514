@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant W as 企微回调
+    participant S as 映射服务
+    participant D as 映射表
+    participant M as 会员小程序
+    participant C as CRM接口
+    participant U as 员工确认界面
+
+    W->>S: 客户添加事件 external_userid/unionid/remark/corp_name/org_id/site_id
+    S->>D: 按(org_id,site_id,external_userid)查询
+    D-->>S: 不存在
+    S->>D: 新建映射 unmatched / follow_userids=[添加人] / crm_contact_id=NULL
+    S->>M: 查询 unionid 绑定关系
+    M-->>S: 唯一绑定到 crm_ct_9021
+    S->>D: 置 confirmed 并写 crm_contact_id（unionid 精确且唯一，唯一自动路径）
+    Note over S,U: 若 unionid 为空或不唯一，转手机号/相似度匹配，只生成 suggested，必须员工确认，绝不自动合并
+    S->>C: 写跟进记录 wecom_contact_added
+    C-->>S: 成功
+    S->>D: 更新 last_synced_at 与审计字段
+    S-->>W: ack

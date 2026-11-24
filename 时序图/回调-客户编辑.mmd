@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant W as 企微回调
+    participant S as 映射服务
+    participant D as 映射表
+    participant C as CRM接口
+    participant U as 员工确认界面
+
+    W->>S: 客户编辑事件 remark/corp_name/tag_ids/unionid
+    S->>D: 查询映射行与 match_status
+    D-->>S: 返回当前状态
+    Note over S,D: unmatched/suggested/conflict 才重算；confirmed/ignored 不重算、不改写 crm_contact_id
+    S->>D: 更新 remark/corp_name/tag_ids（去重）
+    S->>S: 执行三级匹配重算（自调用）
+    S->>D: 写回 suggested/conflict/unmatched 与证据（crm_contact_id 仍为空）
+    S->>U: 提示待确认建议（必须员工确认）
+    U->>S: 员工显式确认（或忽略）
+    S->>D: 写 crm_contact_id 并置 confirmed（仅人工确认触发）
+    S->>C: 写跟进记录 wecom_contact_profile_updated
+    C-->>S: 成功
+    S-->>W: ack

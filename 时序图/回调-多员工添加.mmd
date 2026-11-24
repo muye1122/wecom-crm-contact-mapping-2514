@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant W as 企微回调
+    participant S as 映射服务
+    participant D as 映射表
+    participant C as CRM接口
+
+    W->>S: 新员工添加同一客户事件 external_userid / 新userid / org_id / site_id
+    S->>D: 按(org_id,site_id,external_userid)查询
+    D-->>S: 命中同一行（如 confirmed）
+    Note over S,D: 不新建重复行，不触发匹配，match_status 与 crm_contact_id 保持原值
+    S->>D: follow_userids 去重追加新userid；已存在则幂等返回
+    S->>C: 写跟进记录 wecom_contact_new_follower
+    C-->>S: 成功
+    S->>D: 更新审计字段与 last_synced_at
+    S-->>W: ack
